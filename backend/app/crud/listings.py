@@ -17,7 +17,7 @@ from app.models.listings import (
 
 _BASE_SELECT = """
     SELECT l.id, l.year, l.price, l.mileage, l.city_id, l.created_at,
-           l.body_type, l.engine_type, l.vin, l.license_plate,
+           l.body_type, l.engine_type, l.vin, l.license_plate, l.color_id,
            m.name AS mark_name, mo.name AS model_name,
            gc.name_ru AS city_name,
            s.displacement, s.power

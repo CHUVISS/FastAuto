@@ -1,0 +1,41 @@
+[
+  {
+    "id": "7700000000000",
+    "name": "Москва",
+    "name_en": "Moscow",
+    "type": "city",
+    "region": {"id": "77"},
+    "coords": {"lat": 55.755819, "lon": 37.617644},
+    "timezone": {"tzid": "Europe/Moscow"},
+    "population": 12506468,
+    "isCapital": true,
+    "okato": "45000000000",
+    "zip": 101000
+  },
+  {
+    "id": "7800000000000",
+    "name": "Санкт-Петербург",
+    "name_en": "Saint Petersburg",
+    "type": "city",
+    "region": {"id": "78"},
+    "coords": {"lat": 59.939095, "lon": 30.315868},
+    "timezone": {"tzid": "Europe/Moscow"},
+    "population": 5598486,
+    "isCapital": false,
+    "okato": "40000000000",
+    "zip": 190000
+  },
+  {
+    "id": "5000000100000",
+    "name": "Одинцово",
+    "name_en": "Odintsovo",
+    "type": "city",
+    "region": {"id": "50"},
+    "coords": {"lat": 55.679457, "lon": 37.278456},
+    "timezone": {"tzid": "Europe/Moscow"},
+    "population": 139000,
+    "isCapital": false,
+    "okato": "46234501000",
+    "zip": 143000
+  }
+]

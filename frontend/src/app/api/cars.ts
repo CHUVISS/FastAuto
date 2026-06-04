@@ -128,6 +128,7 @@ interface ListingRow {
   created_at: string;
   body_type: string | null;
   engine_type: string | null;
+  color_id: string | null;
   mark_name: string | null;
   model_name: string | null;
   city_name: string | null;
@@ -178,7 +179,7 @@ function mapRow(row: ListingRow): Car {
     price: row.price,
     mileage: row.mileage,
     vin: null,
-    color: null,
+    color: row.color_id ?? null,
     fuel_type: row.engine_type,
     transmission: null,
     body_type: row.body_type,

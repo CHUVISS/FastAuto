@@ -1,6 +1,9 @@
 x-common: &common
   networks:
     - fastauto-network
+x-env: &env
+  env_file: .env
+
 services:
 
   # ── PostgreSQL ───────────────────────────────────────────────────────────────
@@ -47,7 +50,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-car_sales}
     volumes:
       - db_data:/var/lib/postgresql/data
-    <<: *common
+    <<: [*common, *env]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 10s
@@ -66,7 +69,7 @@ services:
       --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
-    <<: *common
+    <<: [*common, *env]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -88,6 +91,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    <<: *common
 
   # Создаёт бакет при первом запуске
   minio-setup:
@@ -102,6 +106,7 @@ services:
         mc mb --ignore-existing local/${MINIO_BUCKET:-car-sales};
         mc anonymous set download local/${MINIO_BUCKET:-car-sales};
       "
+    <<: *common
 
   # ── Backend (FastAPI + Granian) ───────────────────────────────────────────────
   backend:
@@ -117,7 +122,6 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-    env_file: .env
     environment:
       ENVIRONMENT: production
       POSTGRES_SERVER: db
@@ -137,7 +141,7 @@ services:
       timeout: 10s
       start_period: 40s
       retries: 3
-    <<: *common
+    <<: [*common, *env]
   # ── nginx: раздаёт фронтенд + проксирует API ─────────────────────────────────
   nginx:
     build:
@@ -160,6 +164,7 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    <<: *common
 
 volumes:
   db_data:
