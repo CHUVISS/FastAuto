@@ -184,13 +184,10 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
-      - "443:443"
     volumes:
       - ./backend/nginx/nginx_main.conf:/etc/nginx/nginx.conf:ro
       - ./backend/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./backend/nginx/security_headers.conf:/etc/nginx/security_headers.conf:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-      - /var/www/certbot:/var/www/certbot:ro
       - type: tmpfs
         target: /var/cache/nginx
         tmpfs:
