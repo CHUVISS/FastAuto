@@ -1,0 +1,47 @@
+# Python build/cache artifacts — recreated inside the image
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.mypy_cache
+.ruff_cache
+.pytest_cache
+.hypothesis
+mypy-baseline.txt
+
+# Coverage / test reports — never shipped in the image
+.coverage
+.coverage.*
+coverage.xml
+htmlcov
+junit-*.xml
+
+# Local env — secrets, never bake into the image
+.env
+.env.local
+.env.test
+.env.*.local
+
+# Tests / fixtures / dev tooling — image is production-only
+tests/
+.fastapicloud/
+
+# Documentation / working notes — bloat, not needed at runtime
+*.md
+docs/
+
+# Editor / OS junk
+.idea/
+.vscode/
+.DS_Store
+*.swp
+*.swo
+
+# Local uploads from dev runs
+uploads/
+
+# Local PostgreSQL/Redis/MinIO data if someone bind-mounted into backend/
+db_data/
+redis_data/
+minio_data/

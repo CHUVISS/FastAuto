@@ -1,0 +1,66 @@
+services:
+  ollama:
+    environment:
+      - OLLAMA_HOST=${OLLAMA_HOST:-0.0.0.0:11434}
+      - OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE:-5m}
+#    mem_limit: ${OLLAMA_MEM_LIMIT:-10g}
+#    memswap_limit: ${OLLAMA_MEMSWAP_LIMIT:-10g}
+
+  db:
+    ports:
+      - "5432:5432"
+
+  redis:
+    ports:
+      - "6379:6379"
+
+  minio:
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    command: ["/app/scripts/start_dev.sh"]
+    ports:
+      - "8000:8000"
+    environment:
+      ENVIRONMENT: local
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+      REDIS_USE_TLS: "false"
+      POSTGRES_SERVER: db
+      USE_PGBOUNCER: "false"
+      MINIO_ENDPOINT: minio:9000
+      STORAGE_BACKEND: minio
+      TRUST_PROXY_HEADERS: "false"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./data:/app/data:ro
+    develop:
+      watch:
+        - action: sync
+          path: ./app
+          target: /app/app
+        - action: sync
+          path: ./alembic
+          target: /app/alembic
+        - action: sync+restart
+          path: ./scripts
+          target: /app/scripts
+        - action: rebuild
+          path: pyproject.toml
+        - action: rebuild
+          path: uv.lock
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy

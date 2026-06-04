@@ -1,0 +1,122 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import './theme.css';
+
+/* Стили для react-slick */
+.slick-slider {
+  position: relative;
+  display: block;
+  box-sizing: border-box;
+  user-select: none;
+  touch-action: pan-y;
+}
+
+.slick-list {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+.slick-track {
+  position: relative;
+  top: 0;
+  left: 0;
+  display: block;
+}
+
+.slick-slide {
+  display: none;
+  float: left;
+  height: 100%;
+  min-height: 1px;
+}
+
+.slick-slide.slick-active {
+  display: block;
+}
+
+.slick-dots {
+  position: absolute;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex !important;
+  gap: 0.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  z-index: 10;
+}
+
+.slick-dots li {
+  margin: 0;
+}
+
+.slick-dots li button {
+  width: 2.5rem;
+  height: 0.25rem;
+  padding: 0;
+  border: none;
+  background: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  border-radius: 2px;
+  font-size: 0;
+  line-height: 0;
+  transition: background 0.3s;
+}
+
+.slick-dots li.slick-active button {
+  background: white;
+}
+
+.slick-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 3rem;
+  height: 3rem;
+  border: none;
+  background: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  border-radius: 50%;
+  font-size: 0;
+  line-height: 0;
+  transition: background 0.3s;
+}
+
+.slick-arrow:hover {
+  background: white;
+}
+
+.slick-prev {
+  left: 1rem;
+}
+
+.slick-next {
+  right: 1rem;
+}
+
+.slick-prev:before,
+.slick-next:before {
+  content: '';
+  display: block;
+  width: 1rem;
+  height: 1rem;
+  border-top: 2px solid #111827;
+  border-right: 2px solid #111827;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+}
+
+.slick-prev:before {
+  transform: translate(-25%, -50%) rotate(-135deg);
+}
+
+.slick-next:before {
+  transform: translate(-75%, -50%) rotate(45deg);
+}

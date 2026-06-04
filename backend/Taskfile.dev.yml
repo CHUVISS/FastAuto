@@ -1,0 +1,197 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: '3'
+
+vars:
+  COMPOSE: docker compose
+  BACKEND_DIR: backend
+
+tasks:
+
+  default:
+    cmds:
+      - task: up
+
+  setup:
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - uv venv
+      - .venv/bin/activate && uv sync
+
+  sync:
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - .venv/bin/activate && uv sync
+
+  lint:
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - .venv/bin/activate && ruff check
+
+  lint:fix:
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - .venv/bin/activate && ruff check --fix
+
+  format:
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - .venv/bin/activate && ruff format
+
+  fix:
+    cmds:
+      - task: lint:fix
+      - task: format
+
+  check:
+    cmds:
+      - task: lint
+      - task: format
+
+  run:
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - .venv/bin/activate && granian --interface asgi --host 0.0.0.0 --port 8000 --workers 1 --reload --reload-paths ./app --http auto app.main:app
+
+  prestart:
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - .venv/bin/activate && python scripts/wait_for_db.py
+      - .venv/bin/activate && alembic upgrade head
+      - .venv/bin/activate && python scripts/initial_data.py
+
+  migrate:
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - .venv/bin/activate && alembic upgrade head
+
+  makemigrations:
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - .venv/bin/activate && alembic revision --autogenerate -m "update"
+
+  seed:
+    dir: '{{.BACKEND_DIR}}'
+    cmds:
+      - .venv/bin/activate && python scripts/initial_data.py
+
+  seed:catalog:
+    desc: 'Идемпотентный сид каталога (hash-based delta) — запускается prestart-ом, но можно вручную'
+    cmds:
+      - '{{.COMPOSE}} exec backend python -m scripts.seed_catalog --source all'
+
+  seed:catalog:force:
+    desc: 'Принудительный re-import каталога даже если hash источника не изменился'
+    cmds:
+      - '{{.COMPOSE}} exec backend python -m scripts.seed_catalog --source all --force'
+
+  seed:dev:
+    desc: 'Демо-объявления для ручного тестирования (только local, идемпотентно)'
+    cmds:
+      - '{{.COMPOSE}} exec backend python -m scripts.seed_dev_listings'
+
+  up:
+    cmds:
+      - '{{.COMPOSE}} up -d'
+
+  up:ai:
+    cmds:
+      - '{{.COMPOSE}} --profile docker-ai up -d'
+
+  up:bouncer:
+    cmds:
+      - '{{.COMPOSE}} --profile pgbouncer up -d'
+
+  up:all:
+    cmds:
+      - '{{.COMPOSE}} --profile docker-ai --profile pgbouncer up -d'
+
+  up:build:
+    cmds:
+      - '{{.COMPOSE}} up -d --build'
+
+  up:ai:build:
+    cmds:
+      - '{{.COMPOSE}} --profile docker-ai up -d --build'
+
+  down:
+    cmds:
+      - '{{.COMPOSE}} --profile docker-ai --profile pgbouncer down'
+
+  down:v:
+    cmds:
+      - '{{.COMPOSE}} --profile docker-ai --profile pgbouncer down -v'
+
+  rebuild:
+    cmds:
+      - '{{.COMPOSE}} --profile docker-ai --profile pgbouncer down'
+      - '{{.COMPOSE}} build --no-cache'
+      - '{{.COMPOSE}} --profile docker-ai up -d'
+
+  rebuild:backend:
+    cmds:
+      - '{{.COMPOSE}} build --no-cache backend'
+      - '{{.COMPOSE}} up -d backend'
+
+  watch:
+    cmds:
+      - '{{.COMPOSE}} watch'
+
+  logs:
+    cmds:
+      - '{{.COMPOSE}} logs -f --tail=100'
+
+  logs:backend:
+    cmds:
+      - '{{.COMPOSE}} logs -f backend'
+
+  logs:db:
+    cmds:
+      - '{{.COMPOSE}} logs -f db'
+
+  logs:ollama:
+    cmds:
+      - '{{.COMPOSE}} --profile docker-ai logs -f ollama'
+
+  shell:backend:
+    cmds:
+      - docker exec -it backend sh
+
+  shell:db:
+    cmds:
+      - docker exec -it db psql -U postgres
+
+  shell:redis:
+    cmds:
+      - docker exec -it redis redis-cli
+
+  shell:minio:
+    cmds:
+      - docker exec -it minio sh
+
+  test:api:
+    cmds:
+      - curl http://localhost:8000/docs
+
+  test:ollama:docker:
+    cmds:
+      - docker exec -it backend curl http://ollama:11434/api/tags
+
+  test:ollama:local:
+    cmds:
+      - curl http://localhost:11434/api/tags
+
+  ports:
+    cmds:
+      - lsof -i :8000 || true
+      - lsof -i :5432 || true
+      - lsof -i :6379 || true
+      - lsof -i :11434 || true
+
+  clean:
+    cmds:
+      - '{{.COMPOSE}} --profile docker-ai --profile pgbouncer down -v --remove-orphans'
+
+  prune:
+    cmds:
+      - docker system prune -af

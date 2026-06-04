@@ -1,0 +1,1 @@
+app/core/log.py:0: error: List item 0 has incompatible type "Callable[[Any, str, dict[str, Any]], dict[str, Any]]"; expected "Callable[[Any, str, MutableMapping[str, Any]], Mapping[str, Any] | str | bytes | bytearray | tuple[Any, ...]]"  [list-item]

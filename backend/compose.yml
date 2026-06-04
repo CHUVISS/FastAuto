@@ -1,0 +1,193 @@
+services:
+  ollama:
+    profiles: [docker-ai]
+    image: ollama/ollama:${OLLAMA_IMAGE_TAG:-latest}
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=${OLLAMA_HOST:-0.0.0.0:11434}
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  model-setup:
+    profiles: [docker-ai]
+    image: curlimages/curl:${CURL_IMAGE_TAG:-latest}
+    command: >-
+      sh -c 'curl -sf -H "Content-Type: application/json" http://ollama:11434/api/pull -d "{\"name\":\"${AI_MODEL_NAME:-qwen2.5:3b}\"}"'
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+  db:
+    image: postgres:${POSTGRES_IMAGE_TAG:-17-alpine}
+    restart: unless-stopped
+    command:
+      - postgres
+      - -c
+      - max_connections=${PG_MAX_CONNECTIONS:-200}
+      - -c
+      - shared_buffers=${PG_SHARED_BUFFERS:-256MB}
+      - -c
+      - effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-768MB}
+      - -c
+      - work_mem=${PG_WORK_MEM:-4MB}
+      - -c
+      - maintenance_work_mem=${PG_MAINTENANCE_WORK_MEM:-64MB}
+      - -c
+      - wal_buffers=${PG_WAL_BUFFERS:-16MB}
+      - -c
+      - random_page_cost=${PG_RANDOM_PAGE_COST:-1.1}
+      - -c
+      - effective_io_concurrency=${PG_EFFECTIVE_IO_CONCURRENCY:-200}
+      - -c
+      - checkpoint_completion_target=${PG_CHECKPOINT_COMPLETION_TARGET:-0.9}
+      - -c
+      - log_min_duration_statement=${PG_LOG_MIN_DURATION_STATEMENT:-100}
+      - -c
+      - synchronous_commit=off
+      - -c
+      - autovacuum_vacuum_scale_factor=0.05
+      - -c
+      - autovacuum_analyze_scale_factor=0.02
+      - -c
+      - autovacuum_vacuum_cost_delay=2ms
+      - -c
+      - autovacuum_vacuum_cost_limit=2000
+      - -c
+      - autovacuum_naptime=30s
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Variable not set}
+      POSTGRES_DB: ${POSTGRES_DB:-car_sales}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:${REDIS_IMAGE_TAG:-7-alpine}
+    restart: unless-stopped
+    command: >
+      redis-server
+      --save ""
+      --appendonly no
+      --maxmemory ${REDIS_MAX_MEMORY:-256mb}
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:${MINIO_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio-setup:
+    image: minio/mc:${MINIO_MC_IMAGE_TAG:-latest}
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "
+        mc alias set local http://minio:9000 ${MINIO_ACCESS_KEY:-minioadmin} ${MINIO_SECRET_KEY:-minioadmin};
+        mc mb --ignore-existing local/${MINIO_BUCKET:-car-sales};
+        mc anonymous set download local/${MINIO_BUCKET:-car-sales};
+      "
+
+  pgbouncer:
+    profiles: [pgbouncer]
+    image: edoburu/pgbouncer:${PGBOUNCER_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Variable not set}
+    volumes:
+      - ./pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "6432:6432"
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        printf '"%s" "%s"\n' "$$POSTGRES_USER" "$$POSTGRES_PASSWORD" > /etc/pgbouncer/userlist.txt
+        chmod 600 /etc/pgbouncer/userlist.txt
+        exec /usr/bin/pgbouncer /etc/pgbouncer/pgbouncer.ini
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -p 6432 -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nginx:
+    image: fholzer/nginx-brotli:v1.28
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx_main.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/security_headers.conf:/etc/nginx/security_headers.conf:ro
+      - type: tmpfs
+        target: /var/cache/nginx
+        tmpfs:
+          size: 536870912
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    stop_grace_period: 30s
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      POSTGRES_SERVER: db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MINIO_ENDPOINT: minio:9000
+      MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL:-http://localhost:9000}
+      TRUST_PROXY_HEADERS: "true"
+      DB_POOL_SIZE: "5"
+      DB_MAX_OVERFLOW: "5"
+      REDIS_MAX_CONNECTIONS: "100"
+    command: ["/app/scripts/start.sh"]
+
+volumes:
+  db_data:
+  redis_data:
+  minio_data:
+  ollama-data:

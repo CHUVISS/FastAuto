@@ -1,0 +1,58 @@
+# Docs: https://docs.codecov.com/docs/codecov-yaml
+
+codecov:
+  notify:
+    require_ci_to_pass: true
+  require_ci_to_pass: true
+
+coverage:
+  range: "70...90"
+  round: down
+  precision: 2
+
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+        flags: [unit, integration, b2b]
+      core:
+        target: 85%
+        paths:
+          - backend/app/core/
+          - backend/app/api/dependencies/auth.py
+    patch:
+      default:
+        target: 80%
+
+flags:
+  unit:
+    paths:
+      - backend/app/
+    carryforward: true
+  integration:
+    paths:
+      - backend/app/
+    carryforward: true
+  e2e:
+    paths:
+      - backend/app/
+    carryforward: true
+
+ignore:
+  - "backend/alembic/**"
+  - "backend/scripts/**"
+  - "backend/tests/**"
+  - "**/__init__.py"
+
+comment:
+  # Layout sections rendered in the PR comment. `reach` and `flags` are
+  # always rendered regardless of the diff state — important because most
+  # CI-only PRs (workflows, lockfile bumps) don't touch app code and would
+  # otherwise produce a one-liner "all modified lines covered" comment
+  # with no aggregate table.
+  layout: "reach, diff, flags, files, footer"
+  behavior: default
+  require_changes: false
+  # Show flags even when carryforward'd (no upload from this PR for the flag).
+  show_carryforward_flags: true

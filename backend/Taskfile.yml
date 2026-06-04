@@ -1,0 +1,85 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: '3'
+
+vars:
+  COMPOSE: docker compose
+  COMPOSE_FILE: compose.yml
+
+tasks:
+
+  up:
+    cmds:
+      - '{{.COMPOSE}} -f {{.COMPOSE_FILE}} up -d'
+
+  up:build:
+    cmds:
+      - '{{.COMPOSE}} -f {{.COMPOSE_FILE}} up -d --build'
+
+  down:
+    cmds:
+      - '{{.COMPOSE}} -f {{.COMPOSE_FILE}} down'
+
+  down:v:
+    cmds:
+      - '{{.COMPOSE}} -f {{.COMPOSE_FILE}} down -v'
+
+  restart:
+    cmds:
+      - task: down
+      - task: up
+
+  rebuild:
+    cmds:
+      - '{{.COMPOSE}} -f {{.COMPOSE_FILE}} down -v'
+      - '{{.COMPOSE}} -f {{.COMPOSE_FILE}} build --no-cache'
+      - '{{.COMPOSE}} -f {{.COMPOSE_FILE}} up -d'
+
+  logs:
+    cmds:
+      - '{{.COMPOSE}} -f {{.COMPOSE_FILE}} logs -f --tail=100'
+
+  logs:backend:
+    cmds:
+      - '{{.COMPOSE}} -f {{.COMPOSE_FILE}} logs -f backend'
+
+  ps:
+    cmds:
+      - '{{.COMPOSE}} -f {{.COMPOSE_FILE}} ps'
+
+  pull:
+    cmds:
+      - '{{.COMPOSE}} -f {{.COMPOSE_FILE}} pull'
+
+  build:
+    cmds:
+      - '{{.COMPOSE}} -f {{.COMPOSE_FILE}} build'
+
+  deploy:
+    cmds:
+      - task: pull
+      - task: up
+
+  health:
+    cmds:
+      - curl -f http://localhost:8000 || exit 1
+
+  migrate:
+    cmds:
+      - docker exec -it backend alembic upgrade head
+
+  seed:
+    cmds:
+      - docker exec -it backend python scripts/initial_data.py
+
+  backup:db:
+    cmds:
+      - docker exec db pg_dump -U postgres car_sales > backup.sql
+
+  restore:db:
+    cmds:
+      - cat backup.sql | docker exec -i db psql -U postgres car_sales
+
+  prune:
+    cmds:
+      - docker system prune -af

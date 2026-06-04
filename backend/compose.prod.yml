@@ -1,0 +1,37 @@
+# Production overrides for a 4 GB / 30 GB server.
+# Usage:
+#   docker compose -f compose.yml -f compose.prod.yml up -d --build
+#
+# Do NOT include compose.override.yml (that file is dev-only).
+
+services:
+
+  # ── nginx: build custom image with frontend static files baked in ───────────
+  nginx:
+    build:
+      # Context = repo root (Final Site/), two levels up from backend/
+      context: ../../
+      dockerfile: Car_sales_backend/backend/Dockerfile.nginx
+      args:
+        # /api/v1 (relative) works when frontend is served from the same nginx
+        VITE_API_URL: ${VITE_API_URL:-/api/v1}
+    volumes:
+      - ./nginx/nginx_main.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/security_headers.conf:/etc/nginx/security_headers.conf:ro
+      - type: tmpfs
+        target: /var/cache/nginx
+        tmpfs:
+          size: 134217728  # 128 MB (reduced from 512 MB for 4 GB server)
+
+  # ── backend: production env + reduced worker count ──────────────────────────
+  backend:
+    environment:
+      ENVIRONMENT: production
+      # 2 workers × ~200 MB RSS = ~400 MB; granian kills workers exceeding 768 MB RSS
+      BACKEND_WORKERS: "2"
+      DB_POOL_SIZE: "5"
+      DB_MAX_OVERFLOW: "5"
+
+  # ── db: remove healthcheck exposure, keep everything else from compose.yml ──
+  # Postgres tuning is controlled via PG_* variables in .env (see .env.prod.example)
