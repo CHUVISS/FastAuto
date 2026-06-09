@@ -39,6 +39,18 @@ __all__ = [
 ]
 
 
+def _fake_mode() -> bool:
+    return settings.PAYMENT_BACKEND == "fake" or not settings.YOOKASSA_SHOP_ID
+
+
+class _FakePayment:
+    """Mock payment object returned in fake mode."""
+    def __init__(self, payment_id: str) -> None:
+        self.id = payment_id
+        self.status = "waiting_for_capture"
+        self.confirmation = None
+
+
 async def create_hold(
     *,
     amount_rub: int,
@@ -46,6 +58,14 @@ async def create_hold(
     idempotence_key: str,
     return_url: str | None = None,
 ) -> CreatedPayment:
+    if _fake_mode():
+        # reservation_id is the part before ":" in the idempotence_key
+        reservation_id = idempotence_key.split(":")[0]
+        fake_id = f"fake_{reservation_id}"
+        base = settings.BACKEND_PUBLIC_URL.rstrip("/")
+        confirm_url = f"{base}/api/v1/payments/fake-confirm?reservation_id={reservation_id}"
+        return CreatedPayment(id=fake_id, confirmation_url=confirm_url)
+
     payload = {
         "amount": _money(amount_rub),
         "capture": False,
@@ -64,6 +84,8 @@ async def create_hold(
 
 
 async def cancel_hold(*, payment_id: str, idempotence_key: str) -> str:
+    if _fake_mode():
+        return "canceled"
     try:
         res = await asyncio.to_thread(Payment.cancel, payment_id, idempotence_key)
     except YK_RAW_ERRORS as exc:
@@ -72,6 +94,8 @@ async def cancel_hold(*, payment_id: str, idempotence_key: str) -> str:
 
 
 async def find_payment(payment_id: str) -> Any:
+    if _fake_mode():
+        return _FakePayment(payment_id)
     try:
         return await asyncio.to_thread(Payment.find_one, payment_id)
     except YK_RAW_ERRORS as exc:

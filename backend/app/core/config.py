@@ -205,7 +205,9 @@ class Settings(BaseSettings):
     YOOKASSA_SECRET_KEY: str = ""
     YOOKASSA_RETURN_URL: str = "https://example.com/api/v1/payments/return"
     FRONTEND_BASE_URL: str = "http://localhost:5173"
+    BACKEND_PUBLIC_URL: str = "http://localhost:8000"
 
+    PAYMENT_BACKEND: Literal["fake", "yookassa"] = "fake"
     SMS_BACKEND: Literal["fake", "exolve"] = "fake"
     EXOLVE_API_KEY: str = ""
     EXOLVE_FROM_NUMBER: str = ""
