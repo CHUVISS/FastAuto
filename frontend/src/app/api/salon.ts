@@ -13,7 +13,7 @@ export interface SalonInfo {
 }
 
 const DEFAULT_SALON_INFO: SalonInfo = {
-  address: 'г. Москва, ул. Автомобильная, д. 1',
+  address: 'Москва, Третьяковский пр., 3',
   phone: '+7 (900) 123-45-67',
   working_hours: [
     { days: 'Пн–Пт', hours: '9:00–20:00' },

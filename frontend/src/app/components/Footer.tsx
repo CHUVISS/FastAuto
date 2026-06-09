@@ -37,10 +37,15 @@ export function Footer() {
                 <Mail className="w-4 h-4" />
                 <span>info@autosalon.ru</span>
               </a>
-              <div className="flex items-center gap-2 text-sm opacity-70">
+              <a
+                href="https://yandex.ru/maps/?text=Москва%2C+Третьяковский+пр.%2C+3"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-sm opacity-70 hover:opacity-100 transition-opacity"
+              >
                 <MapPin className="w-4 h-4" />
-                <span>Москва, ул. Примерная, д. 1</span>
-              </div>
+                <span>Москва, Третьяковский пр., 3</span>
+              </a>
             </div>
           </div>
 

@@ -584,7 +584,14 @@ export function CarDetailPage() {
                   <div className="text-sm">
                     {cityName && <p className="font-medium text-foreground">{cityName}</p>}
                     {car.sale_address ? (
-                      <p className="text-muted-foreground">{car.sale_address}</p>
+                      <a
+                        href={`https://yandex.ru/maps/?text=${encodeURIComponent(car.sale_address)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        {car.sale_address}
+                      </a>
                     ) : (
                       <p className="text-muted-foreground">{T.carDetail.addressAfterBooking}</p>
                     )}
