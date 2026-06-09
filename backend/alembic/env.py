@@ -14,6 +14,7 @@ import app.models.payout  # noqa: F401
 import app.models.reservations  # noqa: F401
 import app.models.tickets  # noqa: F401
 import app.models.users  # noqa: F401
+import app.models.preferences  # noqa: F401
 from alembic import context
 from app.core.config import settings
 

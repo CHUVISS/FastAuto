@@ -24,6 +24,7 @@ from app.services.ai.ai_history import (
 )
 from app.services.ai.ai_sanitizer import sanitize
 from app.services.ai.ai_tools import TOOLS_SCHEMA, execute_tool
+from app.services.ai.preference_engine import PreferenceEngine
 
 logger = logging.getLogger(__name__)
 
@@ -122,8 +123,20 @@ async def stream_ai_response(
         yield _sse({"type": "error", "message": "Ошибка сохранения диалога"})
         return
 
+    engine = PreferenceEngine(session)
+    try:
+        preferences = await engine.get_preferences(user_id)
+    except Exception:
+        preferences = {}
+
+    system_content = SYSTEM_PROMPT
+    top = PreferenceEngine.top_preferences(preferences)
+    if top:
+        pref_hint = ", ".join(f"{p['value']} ({p['type']})" for p in top)
+        system_content += f"\n\nПредпочтения пользователя (учти при подборе): {pref_hint}"
+
     messages: list[dict[str, Any]] = [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": system_content},
         *history,
         {"role": "user", "content": cleaned_message},
     ]
@@ -131,6 +144,7 @@ async def stream_ai_response(
     client = _get_client()
     full_response_tokens: list[str] = []
     tool_calls_log: list[dict[str, Any]] = []
+    implicit_tags: dict[str, str] = {}
 
     for tool_round in range(settings.AI_MAX_TOOL_CALL_ROUNDS):
         try:
@@ -216,6 +230,24 @@ async def stream_ai_response(
             else:
                 result_json, error_str = result  # type: ignore[misc]
 
+            if tc.function.name == "search_listings" and preferences:
+                try:
+                    result_data_raw = json.loads(result_json)
+                    if isinstance(result_data_raw.get("listings"), list):
+                        result_data_raw["listings"] = PreferenceEngine.rank_cars(
+                            result_data_raw["listings"], preferences
+                        )
+                        result_json = json.dumps(result_data_raw, ensure_ascii=False)
+                except (json.JSONDecodeError, TypeError, AttributeError):
+                    pass
+
+            if tc.function.name == "search_listings":
+                args = tc.function.arguments or {}
+                if mark := args.get("mark"):
+                    implicit_tags["brand"] = str(mark)
+                if body_type := args.get("body_type"):
+                    implicit_tags["body_type"] = str(body_type)
+
             # Extract listing IDs from tool results to send to the frontend
             listing_ids: list[str] = []
             try:
@@ -250,6 +282,13 @@ async def stream_ai_response(
         )
 
     final_content = "".join(full_response_tokens)
+
+    if implicit_tags:
+        try:
+            await engine.update_weights(user_id, implicit_tags, "positive")
+        except Exception as exc:
+            logger.debug("Preference update skipped: %s", exc)
+            await session.rollback()
 
     try:
         assistant_msg = await save_message(
