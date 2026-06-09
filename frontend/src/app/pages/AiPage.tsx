@@ -29,38 +29,11 @@ interface LocalMessage {
 
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 
-// ── Conversation cache (sessionStorage) ────────────────────────────────────
-// Persists full messages + car-preview listing IDs so navigation away and back
-// restores the exact conversation state without hitting the server.
-
-const CONV_CACHE_KEY = 'ai_conv_cache';
-
-type CachedMsg = { id: string; role: 'user' | 'assistant'; content: string; previewIds: string[] };
-
-function saveConvCache(convId: string, messages: LocalMessage[]) {
-  try {
-    const cache = JSON.parse(sessionStorage.getItem(CONV_CACHE_KEY) || '{}');
-    cache[convId] = messages
-      .filter(m => !m.isToolCall)
-      .map(m => ({
-        id: m.id,
-        role: m.role,
-        content: m.content,
-        previewIds: m.carPreviews?.map(c => c.id) ?? [],
-      }));
-    // Keep at most 5 conversations to avoid storage bloat
-    const keys = Object.keys(cache);
-    if (keys.length > 5) delete cache[keys[0]];
-    sessionStorage.setItem(CONV_CACHE_KEY, JSON.stringify(cache));
-  } catch {}
-}
-
-function loadConvCache(convId: string): CachedMsg[] {
-  try {
-    const cache = JSON.parse(sessionStorage.getItem(CONV_CACHE_KEY) || '{}');
-    return cache[convId] ?? [];
-  } catch { return []; }
-}
+// ── Module-level conversation cache ────────────────────────────────────────
+// Stores full LocalMessage arrays (including CarType objects) in a plain Map.
+// Survives React component unmount/remount within the same browser tab,
+// so back-navigation instantly restores the exact conversation state.
+const _convCache = new Map<string, LocalMessage[]>();
 
 async function fetchCarsByMentions(content: string): Promise<CarType[]> {
   UUID_RE.lastIndex = 0;
@@ -413,37 +386,21 @@ export function AiPage() {
   }, [activeConversationId, setSearchParams]);
 
   const loadConversation = useCallback(async (id: string) => {
-    // ── Fast path: restore from sessionStorage cache ──────────────────────
-    const cached = loadConvCache(id);
-    if (cached.length > 0) {
-      setLoadingConversation(true);
-      const withPreviews = await Promise.all(
-        cached.map(async (m) => {
-          if (m.role !== 'assistant' || m.previewIds.length === 0) {
-            return { id: m.id, role: m.role, content: m.content } as LocalMessage;
-          }
-          const results = await Promise.allSettled(
-            m.previewIds.map(pid => carsApi.get(pid).catch(() => null))
-          );
-          const carPreviews: CarType[] = [];
-          for (const r of results) {
-            if (r.status === 'fulfilled' && r.value) carPreviews.push(r.value);
-          }
-          return { id: m.id, role: m.role, content: m.content, ...(carPreviews.length > 0 ? { carPreviews } : {}) } as LocalMessage;
-        })
-      );
-      setMessages(withPreviews);
+    // Fast path: module-level cache (survives navigation within the tab)
+    const cached = _convCache.get(id);
+    if (cached && cached.length > 0) {
+      setMessages(cached);
       setActiveConversationId(id);
-      setLoadingConversation(false);
       return;
     }
 
-    // ── Slow path: load from server (first open of conversation) ─────────
+    // Slow path: load from server (first open, or after tab refresh)
     setLoadingConversation(true);
     try {
       const conv = await getConversation(id);
-      const base = conv.messages.map((m: AiMessage) => ({ id: m.id, role: m.role, content: m.content }));
-
+      const base = conv.messages.map((m: AiMessage) => ({
+        id: m.id, role: m.role as 'user' | 'assistant', content: m.content,
+      }));
       const withPreviews = await Promise.all(
         base.map(async (m) => {
           if (m.role !== 'assistant') return m;
@@ -451,11 +408,9 @@ export function AiPage() {
           return carPreviews.length > 0 ? { ...m, carPreviews } : m;
         })
       );
-
       setMessages(withPreviews);
       setActiveConversationId(id);
-      // Populate cache for future navigations
-      saveConvCache(id, withPreviews);
+      _convCache.set(id, withPreviews);
     } catch {
       toast.error(T.ai.loadError);
     } finally {
@@ -528,59 +483,78 @@ export function AiPage() {
       },
       (convId) => {
         setIsStreaming(false);
+
+        // Capture refs OUTSIDE of state updater (no side-effects inside updater)
+        hadCarSearchRef.current = false;
+        const directIds = [...collectedListingIdsRef.current];
+        collectedListingIdsRef.current = [];
+
+        const cid = convId || activeConversationId;
+
+        // 1. Update messages: remove tool-call placeholders, mark as done
         setMessages(prev => {
-          const updated = prev.filter(m => !m.isToolCall).map(m =>
-            m.id === assistantId ? { ...m, isStreaming: false } : m
-          );
-          // Save text immediately so navigation away preserves the message
-          const cid = convId || activeConversationId;
-          if (cid) saveConvCache(cid, updated);
-
-          hadCarSearchRef.current = false;
-          const assistantMsgFinal = updated.find(m => m.id === assistantId);
-          const directIds = collectedListingIdsRef.current;
-          collectedListingIdsRef.current = [];
-
-          if (assistantMsgFinal) {
-            const loadPreviews = async () => {
-              let carPreviews: CarType[] = [];
-
-              if (directIds.length > 0) {
-                const results = await Promise.allSettled(
-                  directIds.map(id => carsApi.get(id).catch(() => null))
-                );
-                const seen = new Set<string>();
-                for (const r of results) {
-                  if (r.status === 'fulfilled' && r.value && !seen.has(r.value.id)) {
-                    seen.add(r.value.id);
-                    carPreviews.push(r.value);
-                  }
-                }
-              }
-
-              if (carPreviews.length === 0) {
-                carPreviews = await fetchCarsByMentions(assistantMsgFinal.content);
-              }
-
-              if (carPreviews.length > 0) {
-                setMessages(prev2 => {
-                  const updated = prev2.map(m =>
-                    m.id === assistantId ? { ...m, carPreviews } : m
-                  );
-                  const cid = convId || activeConversationId;
-                  if (cid) saveConvCache(cid, updated);
-                  return updated;
-                });
-              }
-            };
-            loadPreviews();
-          }
+          const updated = prev
+            .filter(m => !m.isToolCall)
+            .map(m => m.id === assistantId ? { ...m, isStreaming: false } : m);
+          // Save to cache immediately (text is ready, previews come later)
+          if (cid) _convCache.set(cid, updated);
           return updated;
         });
+
+        // 2. Update conversation ID / sidebar (for new conversations)
         if (convId && !activeConversationId) {
           setActiveConversationId(convId);
           getConversations().then(data => setConversations(data.data)).catch(() => {});
         }
+
+        // 3. Load car previews asynchronously (fully outside state updater)
+        const loadPreviews = async () => {
+          let carPreviews: CarType[] = [];
+
+          if (directIds.length > 0) {
+            const results = await Promise.allSettled(
+              directIds.map(id => carsApi.get(id).catch(() => null))
+            );
+            const seen = new Set<string>();
+            for (const r of results) {
+              if (r.status === 'fulfilled' && r.value && !seen.has(r.value.id)) {
+                seen.add(r.value.id);
+                carPreviews.push(r.value);
+              }
+            }
+          }
+
+          // Fallback: scan message text for UUID mentions
+          if (carPreviews.length === 0) {
+            // Read content from cache (component may have unmounted)
+            const cached = cid ? _convCache.get(cid) : null;
+            const msg = cached?.find(m => m.id === assistantId);
+            if (msg?.content) {
+              carPreviews = await fetchCarsByMentions(msg.content);
+            }
+          }
+
+          if (carPreviews.length > 0) {
+            // Update React state (no-op if unmounted, but cache update always runs)
+            setMessages(prev => {
+              const updated = prev.map(m =>
+                m.id === assistantId ? { ...m, carPreviews } : m
+              );
+              if (cid) _convCache.set(cid, updated);
+              return updated;
+            });
+            // Update cache even if component unmounted
+            if (cid) {
+              const cached = _convCache.get(cid);
+              if (cached) {
+                _convCache.set(cid, cached.map(m =>
+                  m.id === assistantId ? { ...m, carPreviews } : m
+                ));
+              }
+            }
+          }
+        };
+        loadPreviews();
       },
       (error) => {
         setIsStreaming(false);
