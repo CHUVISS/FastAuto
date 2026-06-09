@@ -68,9 +68,9 @@ class Reservation(SQLModel, table=True):
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    listing_id: uuid.UUID = Field(foreign_key="listings.id", index=True)
-    buyer_id: uuid.UUID = Field(foreign_key="users.id", index=True)
-    seller_id: uuid.UUID = Field(foreign_key="users.id", index=True)
+    listing_id: uuid.UUID = Field(foreign_key="listings.id", ondelete="CASCADE", index=True)
+    buyer_id: uuid.UUID = Field(foreign_key="users.id", ondelete="CASCADE", index=True)
+    seller_id: uuid.UUID = Field(foreign_key="users.id", ondelete="CASCADE", index=True)
     deposit_amount: int = Field(sa_type=BigInteger)
     yk_payment_id: str | None = Field(default=None, max_length=50)
     status: ReservationStatus = Field(

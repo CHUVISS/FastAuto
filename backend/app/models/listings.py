@@ -71,7 +71,7 @@ class Listing(SQLModel, table=True):
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    seller_id: uuid.UUID = Field(foreign_key="users.id")
+    seller_id: uuid.UUID = Field(foreign_key="users.id", ondelete="CASCADE")
     modification_id: str = Field(max_length=100, foreign_key="catalog.modifications.id")
     mark_id: str = Field(max_length=50)
     model_id: str = Field(max_length=100)
@@ -191,8 +191,8 @@ class ViewingBooking(SQLModel, table=True):
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    listing_id: uuid.UUID = Field(foreign_key="listings.id")
-    buyer_id: uuid.UUID = Field(foreign_key="users.id")
+    listing_id: uuid.UUID = Field(foreign_key="listings.id", ondelete="CASCADE")
+    buyer_id: uuid.UUID = Field(foreign_key="users.id", ondelete="CASCADE")
     window_id: uuid.UUID | None = Field(default=None, foreign_key="viewing_windows.id")
     reservation_id: uuid.UUID | None = Field(
         default=None, foreign_key="reservations.id", index=True

@@ -26,13 +26,13 @@ class Ticket(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     type: TicketType
     status: TicketStatus = Field(default=TicketStatus.open, index=True)
-    creator_id: uuid.UUID = Field(foreign_key="users.id", index=True)
+    creator_id: uuid.UUID | None = Field(default=None, foreign_key="users.id", ondelete="SET NULL", index=True)
     assignee_id: uuid.UUID | None = Field(
         default=None, foreign_key="users.id", ondelete="SET NULL", index=True
     )
-    listing_id: uuid.UUID | None = Field(default=None, foreign_key="listings.id")
+    listing_id: uuid.UUID | None = Field(default=None, foreign_key="listings.id", ondelete="SET NULL")
     reservation_id: uuid.UUID | None = Field(
-        default=None, foreign_key="reservations.id"
+        default=None, foreign_key="reservations.id", ondelete="SET NULL"
     )
     title: str = Field(max_length=200)
     created_at: datetime = Field(

@@ -13,7 +13,7 @@ class PhoneOTPAudit(SQLModel, table=True):
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: uuid.UUID = Field(foreign_key="users.id")
+    user_id: uuid.UUID = Field(foreign_key="users.id", ondelete="CASCADE")
     phone: str = Field(max_length=20)
     purpose: str = Field(default="phone_verify", max_length=20)
     sent_at: datetime = Field(
