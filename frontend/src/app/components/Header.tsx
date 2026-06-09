@@ -168,14 +168,27 @@ export function Header() {
   const navigate = useNavigate();
   const { T } = useLanguage();
 
+  // Блокируем скролл страницы когда мобильное меню открыто
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileMenuOpen]);
+
   const handleLogout = async () => {
     await logout();
     toast.success(T.profile.logoutSuccess);
     navigate('/');
+    setMobileMenuOpen(false);
   };
 
+  const closeMenu = () => setMobileMenuOpen(false);
+
   return (
-    <header className="bg-background border-b border-border sticky top-0 z-50">
+    <header className="bg-background border-b border-border sticky top-0 z-50" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -231,52 +244,72 @@ export function Header() {
             {user && <NotificationBell />}
             <LangToggle />
             <ThemeToggle />
-            <button className="p-2 text-foreground" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+            <button className="p-2 text-foreground" onClick={() => setMobileMenuOpen(true)}>
               <Menu className="w-6 h-6" />
             </button>
           </div>
         </div>
+      </div>
 
-        {mobileMenuOpen && (
-          <div className="md:hidden py-2 border-t border-border">
-            <nav className="flex flex-col">
-              <Link to="/catalog" onClick={() => setMobileMenuOpen(false)} className="flex items-center py-3 px-1 text-foreground hover:text-primary transition-colors">{T.nav.listings}</Link>
-              <Link to="/ai" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-1.5 py-3 px-1 text-foreground hover:text-primary transition-colors">
-                <Bot className="w-4 h-4" />{T.nav.ai}
+      {/* Mobile menu — fixed overlay, страница не двигается */}
+      {mobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex">
+          {/* Затемнение */}
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeMenu} />
+
+          {/* Панель справа */}
+          <div className="relative ml-auto w-72 max-w-full h-full bg-card border-l border-border flex flex-col shadow-2xl overflow-y-auto">
+            {/* Шапка */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1rem)' }}>
+              <span className="font-semibold text-foreground text-lg">FastAuto</span>
+              <button onClick={closeMenu} className="p-2 text-muted-foreground hover:text-foreground transition-colors">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Навигация */}
+            <nav className="flex flex-col px-3 py-4 gap-1 flex-1">
+              <Link to="/catalog" onClick={closeMenu} className="flex items-center gap-3 px-4 py-3 rounded-xl text-foreground hover:bg-secondary transition-colors font-medium">{T.nav.listings}</Link>
+              <Link to="/ai" onClick={closeMenu} className="flex items-center gap-3 px-4 py-3 rounded-xl text-foreground hover:bg-secondary transition-colors font-medium">
+                <Bot className="w-5 h-5 text-primary" />{T.nav.ai}
               </Link>
-              <Link to="/about" onClick={() => setMobileMenuOpen(false)} className="flex items-center py-3 px-1 text-foreground hover:text-primary transition-colors">{T.nav.about}</Link>
-              <a href="tel:+79001234567" className="flex items-center gap-2 py-3 px-1 text-foreground hover:text-primary transition-colors">
-                <Phone className="w-5 h-5" />
+              <Link to="/about" onClick={closeMenu} className="flex items-center gap-3 px-4 py-3 rounded-xl text-foreground hover:bg-secondary transition-colors font-medium">{T.nav.about}</Link>
+              <a href="tel:+79001234567" onClick={closeMenu} className="flex items-center gap-3 px-4 py-3 rounded-xl text-foreground hover:bg-secondary transition-colors font-medium">
+                <Phone className="w-5 h-5 text-primary" />
                 <span>+7 (900) 123-45-67</span>
               </a>
-              <div className="pt-3 mt-1 border-t border-border flex flex-col gap-3 pb-2">
-                {user ? (
-                  <>
-                    <Link to="/profile" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-lg">
-                      <User className="w-5 h-5" />
-                      <span className="font-medium">{user.full_name}</span>
-                    </Link>
-                    {(user.role === 'admin' || user.role === 'manager') && (
-                      <Link to="/admin" onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 bg-secondary text-foreground rounded-lg text-sm text-center">
-                        {user.role === 'admin' ? T.nav.admin : T.nav.manager}
-                      </Link>
-                    )}
-                    <button onClick={handleLogout} className="flex items-center gap-2 py-3 px-1 text-destructive">
-                      <LogOut className="w-5 h-5" />
-                      <span>{T.nav.signOut}</span>
-                    </button>
-                  </>
-                ) : (
-                  <Link to="/profile" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-lg font-medium">
-                    <User className="w-5 h-5" />
-                    <span>{T.nav.signIn}</span>
-                  </Link>
-                )}
-              </div>
             </nav>
+
+            {/* Блок пользователя */}
+            <div className="border-t border-border px-3 py-4 flex flex-col gap-2" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1rem)' }}>
+              {user ? (
+                <>
+                  <Link to="/profile" onClick={closeMenu} className="flex items-center gap-3 px-4 py-3 bg-primary text-primary-foreground rounded-xl font-medium">
+                    <User className="w-5 h-5" />
+                    <span className="truncate">{user.full_name}</span>
+                  </Link>
+                  {(user.role === 'admin' || user.role === 'manager') && (
+                    <Link to="/admin" onClick={closeMenu} className="px-4 py-3 bg-secondary text-foreground rounded-xl text-sm text-center font-medium hover:bg-secondary/80 transition-colors">
+                      {user.role === 'admin' ? T.nav.admin : T.nav.manager}
+                    </Link>
+                  )}
+                  <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 rounded-xl text-destructive hover:bg-destructive/10 transition-colors font-medium">
+                    <LogOut className="w-5 h-5" />
+                    <span>{T.nav.signOut}</span>
+                  </button>
+                </>
+              ) : (
+                <Link to="/profile" onClick={closeMenu} className="flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-xl font-medium">
+                  <User className="w-5 h-5" />
+                  <span>{T.nav.signIn}</span>
+                </Link>
+              )}
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </header>
   );
 }

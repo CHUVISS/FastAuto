@@ -608,18 +608,18 @@ export function CarDetailPage() {
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border px-4 py-3 flex gap-3">
           <a
             href="tel:+79001234567"
-            className="flex-1 flex items-center justify-center gap-2 py-3 bg-accent text-accent-foreground rounded-lg font-medium text-sm"
+            className="flex-1 flex items-center justify-center gap-2 py-3 bg-accent text-accent-foreground rounded-lg font-medium text-sm whitespace-nowrap"
           >
-            <Phone className="w-4 h-4" />
-            <span>{T.carDetail.callBtn}</span>
+            <Phone className="w-4 h-4 flex-shrink-0" />
+            <span className="truncate">{T.carDetail.callBtn}</span>
           </a>
           <button
             onClick={() => setShowBookingPanel(true)}
             disabled={car.status === 'reserved'}
-            className="flex-1 flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground rounded-lg font-medium text-sm disabled:opacity-60"
+            className="flex-1 flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground rounded-lg font-medium text-sm disabled:opacity-60 whitespace-nowrap"
           >
-            <Calendar className="w-4 h-4" />
-            <span>{car.status === 'reserved' ? T.status.reserved : T.carDetail.bookViewing}</span>
+            <Calendar className="w-4 h-4 flex-shrink-0" />
+            <span className="truncate">{car.status === 'reserved' ? T.status.reserved : T.carDetail.bookViewing}</span>
           </button>
         </div>
       )}
