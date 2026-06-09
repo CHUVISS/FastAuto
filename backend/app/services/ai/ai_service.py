@@ -97,6 +97,51 @@ async def _call_ollama(
     )
 
 
+async def _stream_text(
+    client: AsyncClient,
+    messages: list[dict[str, Any]],
+) -> AsyncGenerator[str, None]:
+    """Stream final text tokens from Ollama, filtering <think> blocks."""
+    buf = ""
+    in_think = False
+
+    async for chunk in await client.chat(
+        model=settings.AI_MODEL_NAME,
+        messages=messages,
+        tools=None,
+        stream=True,
+        options=_build_options(),
+    ):
+        token = chunk.message.content or ""
+        if not token:
+            continue
+        buf += token
+
+        while buf:
+            if in_think:
+                end = buf.find("</think>")
+                if end >= 0:
+                    buf = buf[end + 8:]
+                    in_think = False
+                else:
+                    buf = ""
+                    break
+            else:
+                start = buf.find("<think>")
+                if start >= 0:
+                    if start > 0:
+                        yield buf[:start]
+                    buf = buf[start + 7:]
+                    in_think = True
+                else:
+                    yield buf
+                    buf = ""
+                    break
+
+    if buf and not in_think:
+        yield buf.strip()
+
+
 async def stream_ai_response(
     user_message: str,
     user_id: uuid.UUID,
@@ -149,52 +194,59 @@ async def stream_ai_response(
     implicit_tags: dict[str, str] = {}
 
     for tool_round in range(settings.AI_MAX_TOOL_CALL_ROUNDS):
+        use_tools = tool_round < settings.AI_MAX_TOOL_CALL_ROUNDS - 1
+
+        if not use_tools:
+            # Final round — true SSE streaming directly from Ollama
+            try:
+                async for token in _stream_text(client, messages):
+                    full_response_tokens.append(token)
+                    yield _sse({"type": "token", "content": token, "conversation_id": str(conv_id)})
+                    await asyncio.sleep(0)
+            except TimeoutError:
+                logger.error("Ollama stream timeout: user=%s", user_id)
+                yield _sse({"type": "error", "message": "Время ожидания истекло. Попробуйте снова."})
+                return
+            except (ResponseError, httpx.ConnectError, httpx.ReadError, ConnectionError) as exc:
+                logger.error("Ollama stream unavailable: %s", exc)
+                yield _sse({"type": "token", "content": _FALLBACK_MESSAGE})
+                yield _sse({"type": "done", "conversation_id": str(conv_id)})
+                return
+            except Exception as exc:
+                logger.error("Ollama stream error: user=%s %s", user_id, exc, exc_info=True)
+                yield _sse({"type": "error", "message": "Внутренняя ошибка AI-сервиса"})
+                return
+            break
+
+        # Tool call round — non-streaming to inspect tool_calls
         try:
-            response = await _call_ollama(
-                client,
-                messages,
-                use_tools=(tool_round < settings.AI_MAX_TOOL_CALL_ROUNDS - 1),
-            )
+            response = await _call_ollama(client, messages, use_tools=True)
         except TimeoutError:
             logger.error("Ollama timeout: user=%s round=%d", user_id, tool_round)
-            yield _sse(
-                {
-                    "type": "error",
-                    "message": "Время ожидания истекло. Попробуйте снова.",
-                }
-            )
+            yield _sse({"type": "error", "message": "Время ожидания истекло. Попробуйте снова."})
             return
-        except (
-            ResponseError,
-            httpx.ConnectError,
-            httpx.ReadError,
-            ConnectionError,
-        ) as exc:
+        except (ResponseError, httpx.ConnectError, httpx.ReadError, ConnectionError) as exc:
             logger.error("Ollama unavailable: %s", exc)
             yield _sse({"type": "token", "content": _FALLBACK_MESSAGE})
             yield _sse({"type": "done", "conversation_id": str(conv_id)})
             return
         except Exception as exc:
-            logger.error(
-                "Ollama unexpected error: user=%s %s", user_id, exc, exc_info=True
-            )
+            logger.error("Ollama unexpected error: user=%s %s", user_id, exc, exc_info=True)
             yield _sse({"type": "error", "message": "Внутренняя ошибка AI-сервиса"})
             return
 
         msg = response.message
 
         if not msg.tool_calls:
+            # Model responded with text instead of tool call — word-by-word fallback
             content = msg.content or ""
             if "<think>" in content:
                 content = _THINK_RE.sub("", content).strip()
             full_response_tokens.append(content)
-
             words = content.split(" ")
             for i, word in enumerate(words):
                 chunk = word + (" " if i < len(words) - 1 else "")
-                yield _sse(
-                    {"type": "token", "content": chunk, "conversation_id": str(conv_id)}
-                )
+                yield _sse({"type": "token", "content": chunk, "conversation_id": str(conv_id)})
                 if i % 8 == 0:
                     await asyncio.sleep(0)
             break
