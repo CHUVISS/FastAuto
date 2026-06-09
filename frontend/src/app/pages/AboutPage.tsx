@@ -10,16 +10,12 @@ import alekseyImage from '../../assets/Alex2_1.png';
 import danilaImage from '../../assets/Danila2.png';
 import timofeyImage from '../../assets/Tima.png';
 
+const MEMBER_IMAGES = [alexImage, danilaImage, timofeyImage, matveyImage, alekseyImage];
+
 export function AboutPage() {
   const { T } = useLanguage();
   useEffect(() => { window.scrollTo(0, 0); }, []);
-  const teamMembers = [
-    { name: 'Чувилов Александр', role: 'Тимлид', image: alexImage },
-    { name: 'Барышев Данила', role: 'Архитектор (Возможно умер)', image: danilaImage },
-    { name: 'Жуков Тимофей', role: 'Frontend-разработчик (Возможно умер)', image: timofeyImage },
-    { name: 'Дворников Матвей', role: 'Backend-разработчик', image: matveyImage },
-    { name: 'Иващенко Алексей', role: 'Тестировщик', image: alekseyImage },
-  ];
+  const teamMembers = T.about.teamMembers.map((m, i) => ({ ...m, image: MEMBER_IMAGES[i] }));
 
   return (
     <div className="min-h-screen bg-background">
