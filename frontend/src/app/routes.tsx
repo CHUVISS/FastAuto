@@ -11,7 +11,8 @@ const ProfilePage      = lazy(() => import('./pages/ProfilePage').then(m => ({ d
 const AdminPage        = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
 const AboutPage        = lazy(() => import('./pages/AboutPage').then(m => ({ default: m.AboutPage })));
 const AiPage           = lazy(() => import('./pages/AiPage').then(m => ({ default: m.AiPage })));
-const CreateListingPage = lazy(() => import('./pages/CreateListingPage').then(m => ({ default: m.CreateListingPage })));
+const CreateListingPage  = lazy(() => import('./pages/CreateListingPage').then(m => ({ default: m.CreateListingPage })));
+const PaymentReturnPage  = lazy(() => import('./pages/PaymentReturnPage').then(m => ({ default: m.PaymentReturnPage })));
 
 export const router = createBrowserRouter([
   {
@@ -28,6 +29,7 @@ export const router = createBrowserRouter([
       { path: 'ai',               element: <AiPage /> },
       { path: 'sell',             element: <CreateListingPage /> },
       { path: 'listing/:id/edit', element: <CreateListingPage /> },
+      { path: 'payment/return',   element: <PaymentReturnPage /> },
       { path: '500',              element: <ServerErrorPage status={500} /> },
       { path: '502',              element: <ServerErrorPage status={502} /> },
       { path: '503',              element: <ServerErrorPage status={503} /> },

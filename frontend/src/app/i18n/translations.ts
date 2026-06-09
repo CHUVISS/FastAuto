@@ -619,6 +619,19 @@ const ru = {
   },
 
   // 404
+  paymentReturn: {
+    okTitle: 'Депозит успешно оформлен!',
+    okDesc: 'Ваш депозит принят. Автомобиль забронирован за вами. Детали брони доступны в личном кабинете.',
+    pendingTitle: 'Платёж обрабатывается',
+    pendingDesc: 'Оплата ещё не подтверждена. Это может занять несколько минут — проверьте статус брони в личном кабинете.',
+    failedTitle: 'Не удалось оплатить',
+    failedDesc: 'При обработке платежа произошла ошибка. Попробуйте ещё раз или выберите другой способ оплаты.',
+    cancelledTitle: 'Бронирование отменено',
+    cancelledDesc: 'Вы отменили оплату. Если передумаете — найдите авто в каталоге и забронируйте снова.',
+    toProfile: 'Мои бронирования',
+    toCatalog: 'В каталог',
+  },
+
   notFound: {
     title: 'Страница не найдена',
     desc: 'К сожалению, запрашиваемая страница не существует',
@@ -1544,6 +1557,19 @@ const en: typeof ru = {
     contactSubtitle: 'We are always happy to answer your questions and help you choose a car',
     callBtn: 'Call us',
     emailBtn: 'Send an email',
+  },
+
+  paymentReturn: {
+    okTitle: 'Deposit successfully placed!',
+    okDesc: 'Your deposit has been accepted. The car is reserved for you. Booking details are available in your profile.',
+    pendingTitle: 'Payment is being processed',
+    pendingDesc: 'The payment has not been confirmed yet. This may take a few minutes — check the booking status in your profile.',
+    failedTitle: 'Payment failed',
+    failedDesc: 'An error occurred while processing the payment. Please try again or choose a different payment method.',
+    cancelledTitle: 'Booking cancelled',
+    cancelledDesc: 'You cancelled the payment. If you change your mind — find the car in the catalog and book again.',
+    toProfile: 'My bookings',
+    toCatalog: 'Go to catalog',
   },
 
   notFound: {

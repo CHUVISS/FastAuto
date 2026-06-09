@@ -37,6 +37,10 @@ export interface Reservation {
   // Раскрывается покупателю при статусе active/settling/completed
   seller_phone?: string | null;
   sale_address?: string | null;
+  // Слот просмотра (если выбран при бронировании)
+  window_date?: string | null;
+  time_from?: string | null;
+  time_to?: string | null;
 }
 
 export interface ReserveResponse {

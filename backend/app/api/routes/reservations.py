@@ -12,7 +12,7 @@ from app.core.config import settings
 from app.crud import listings as listing_crud
 from app.crud import reservations as res_crud
 from app.crud import viewings as viewings_crud
-from app.models.listings import Listing
+from app.models.listings import Listing, ViewingBooking, ViewingWindow
 from app.models.reservations import (
     CancelReason,
     OutcomeParty,
@@ -218,8 +218,37 @@ async def reserve(
 
 
 @router.get("/my", response_model=None)
-async def my_reservations(user: CurrentUser, session: SessionDep) -> list[Reservation]:
-    return await res_crud.list_for_user(session, user.id)
+async def my_reservations(user: CurrentUser, session: SessionDep) -> list[dict]:
+    reservations = await res_crud.list_for_user(session, user.id)
+    if not reservations:
+        return []
+
+    # Fetch active viewing bookings + windows for all reservations in one query
+    res_ids = [r.id for r in reservations]
+    bookings_stmt = (
+        select(ViewingBooking, ViewingWindow)
+        .join(ViewingWindow, ViewingBooking.window_id == ViewingWindow.id, isouter=True)
+        .where(
+            col(ViewingBooking.reservation_id).in_(res_ids),
+            col(ViewingBooking.status) != "cancelled",
+        )
+    )
+    rows = (await session.execute(bookings_stmt)).all()
+    window_map: dict[uuid.UUID, dict] = {}
+    for booking, window in rows:
+        if booking.reservation_id not in window_map and window is not None:
+            window_map[booking.reservation_id] = {
+                "window_date": str(window.window_date),
+                "time_from": str(window.time_from)[:5],
+                "time_to": str(window.time_to)[:5],
+            }
+
+    result = []
+    for r in reservations:
+        data = r.model_dump()
+        data.update(window_map.get(r.id, {"window_date": None, "time_from": None, "time_to": None}))
+        result.append(data)
+    return result
 
 
 @router.get("/{reservation_id}", response_model=None)

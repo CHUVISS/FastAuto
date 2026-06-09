@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   User, Eye, FileText, LogOut, Heart, EyeOff, Car, PenLine, Loader2,
   ExternalLink, Trash2, Send, Pencil, Archive, Lock, Phone, CheckCircle,
-  MessageSquare, Plus, ChevronRight, AlertCircle, X, MapPin,
+  MessageSquare, Plus, ChevronRight, AlertCircle, X, MapPin, Calendar, Clock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../hooks/useAuth';
@@ -848,6 +848,20 @@ function ReservationsTab({ userId }: { userId: string }) {
                   <p className="text-sm text-muted-foreground mt-0.5">
                     {new Date(r.created_at).toLocaleDateString(dateFmt, { day: 'numeric', month: 'long', year: 'numeric' })}
                   </p>
+                  {r.window_date && (
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+                      <span className="flex items-center gap-1 text-sm text-primary font-medium">
+                        <Calendar className="w-3.5 h-3.5" />
+                        {new Date(`${r.window_date}T00:00:00`).toLocaleDateString(dateFmt, { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </span>
+                      {r.time_from && r.time_to && (
+                        <span className="flex items-center gap-1 text-sm text-primary font-medium">
+                          <Clock className="w-3.5 h-3.5" />
+                          {r.time_from} – {r.time_to}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <p className="text-sm text-muted-foreground mt-0.5">
                     {RT.depositLabel} {new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0 }).format(r.deposit_amount)}
                   </p>
