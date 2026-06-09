@@ -1,154 +1,211 @@
-# Car Sales
+<div align="center">
 
-A full-stack platform for car sales workflow: listings, viewings, reservations, deals, messaging, and an AI assistant.
+# 🚗 FastAuto
 
-## Structure
+**Полнофункциональная платформа для продажи автомобилей**
+
+Объявления · Просмотры · Бронирование · Сделки · Тикеты · AI-ассистент
+
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=white)](https://react.dev)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://postgresql.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://typescriptlang.org)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](https://docker.com)
+[![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=flat-square&logo=redis&logoColor=white)](https://redis.io)
+
+</div>
+
+---
+
+## ✨ Возможности
+
+| Модуль | Описание |
+|--------|----------|
+| 🗂 **Каталог** | Поиск и фильтрация авто по марке, модели, поколению, цене, пробегу, типу кузова и КПП |
+| 📋 **Объявления** | Создание, редактирование и публикация с фото, VIN, адресом и условиями оплаты |
+| 📅 **Просмотры** | Запись на осмотр авто в удобное время через встроенный планировщик |
+| 🔒 **Бронирование** | Резервация с депозитом через YooKassa (двухстадийный холд) |
+| 🤖 **AI-ассистент** | Умный помощник на базе Ollama для подбора и консультации |
+| 💬 **Тикеты** | Система обращений: создание, назначение, переписка |
+| ❤️ **Избранное** | Сохранение понравившихся объявлений |
+| 🛡 **Админ-панель** | Управление объявлениями, пользователями, брониями, модерация и статистика |
+| 🌐 **i18n** | Полная локализация RU / EN |
+
+---
+
+## 🏗 Архитектура
 
 ```
-.
-├── frontend/              # React SPA
-├── backend/               # FastAPI backend + Docker configs
-│   ├── app/               # Python source
-│   ├── nginx/             # nginx configs
-│   ├── scripts/           # startup + seed scripts
-│   ├── Dockerfile         # backend image
-│   └── Dockerfile.nginx   # nginx image (builds frontend inside)
-├── docker-compose.yml     # production: one command to run everything
-└── .env.example           # environment template
+FastAuto/
+├── frontend/                  # React SPA (TypeScript + Vite)
+│   └── src/app/
+│       ├── pages/             # страницы приложения
+│       ├── components/        # UI-компоненты
+│       ├── api/               # клиенты для backend API
+│       ├── hooks/             # React-хуки
+│       └── i18n/              # переводы RU / EN
+│
+├── backend/                   # FastAPI backend
+│   ├── app/
+│   │   ├── api/routes/        # HTTP-эндпоинты
+│   │   ├── models/            # SQLModel-модели (БД)
+│   │   ├── schemas/           # Pydantic-схемы
+│   │   ├── crud/              # слой работы с БД
+│   │   ├── services/          # бизнес-логика
+│   │   └── core/              # конфиг, безопасность, кэш
+│   ├── alembic/               # миграции БД
+│   └── tests/                 # unit + integration тесты
+│
+├── docker-compose.yml         # production: всё одной командой
+└── .env.example               # шаблон переменных окружения
 ```
 
-## Tech stack
+---
 
-| Layer | Technology |
-|---|---|
-| Frontend | React 19, TypeScript, Vite, Tailwind CSS v4, Radix UI, React Router v7 |
-| Backend | Python 3.12, FastAPI, SQLModel, Granian (ASGI) |
-| Database | PostgreSQL 17 |
-| Cache | Redis 7 |
-| File storage | MinIO (S3-compatible) |
-| Reverse proxy | nginx with brotli compression |
-| AI assistant | Ollama (optional, requires separate server) |
+## 🛠 Технологический стек
 
-## Production deployment
+### Frontend
 
-Tested on a **4 GB RAM / 30 GB disk** VPS.
+| Технология | Версия | Назначение |
+|-----------|--------|------------|
+| React | 19 | UI-фреймворк |
+| TypeScript | 5 | Типизация |
+| Vite | 6 | Сборщик |
+| Tailwind CSS | v4 | Стили |
+| Radix UI | latest | Компоненты |
+| React Router | v7 | Маршрутизация |
+| Sonner | latest | Уведомления |
+| Lucide React | latest | Иконки |
 
-### 1. Clone the repository
+### Backend
+
+| Технология | Версия | Назначение |
+|-----------|--------|------------|
+| Python | 3.12 | Язык |
+| FastAPI | 0.115 | Web-фреймворк |
+| SQLModel | 0.0.22 | ORM |
+| Granian | 2.7 | ASGI-сервер |
+| Alembic | 1.14 | Миграции БД |
+| Pydantic | 2 | Валидация данных |
+| PyJWT + Argon2 | latest | Аутентификация |
+| APScheduler | 3.11 | Фоновые задачи |
+| Ollama | 0.4 | AI-интеграция |
+| YooKassa | 3.10 | Платежи |
+
+### Инфраструктура
+
+| Сервис | Назначение |
+|--------|------------|
+| PostgreSQL 17 | Основная база данных |
+| Redis 7 | Кэш + rate limiting |
+| MinIO | Хранилище файлов (S3-совместимое) |
+| nginx | Reverse proxy + brotli-сжатие |
+
+---
+
+## 🚀 Быстрый старт (Production)
+
+> Протестировано на VPS с **4 GB RAM / 30 GB диска**.
+
+### 1. Клонировать репозиторий
 
 ```bash
-git clone <repo-url> /srv/app
-cd /srv/app
+git clone https://github.com/CHUVISS/FastAuto /home/user1alex/app
+cd /home/user1alex/app
 ```
 
-### 2. Configure environment
+### 2. Настроить окружение
 
 ```bash
 cp .env.example .env
-nano .env          # fill in every CHANGEME value
+nano .env
 ```
 
-Key variables:
+Ключевые переменные:
 
-| Variable | What to set |
-|---|---|
+| Переменная | Как заполнить |
+|-----------|---------------|
 | `SECRET_KEY` / `REFRESH_SECRET_KEY` | `python3 -c "import secrets; print(secrets.token_urlsafe(32))"` |
-| `POSTGRES_PASSWORD` | strong random password |
-| `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | MinIO credentials |
-| `MINIO_PUBLIC_URL` | `http://<your-server-ip>/minio` |
-| `BACKEND_CORS_ORIGINS` | `"http://<your-server-ip>"` |
-| `FRONTEND_BASE_URL` | `http://<your-server-ip>` |
-| `FIRST_SUPERUSER_EMAIL` / `_PASSWORD` | initial admin account |
+| `POSTGRES_PASSWORD` | надёжный случайный пароль |
+| `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | ключи MinIO |
+| `MINIO_PUBLIC_URL` | `http://<IP-сервера>/minio` |
+| `BACKEND_CORS_ORIGINS` | `"http://<IP-сервера>"` |
+| `FRONTEND_BASE_URL` | `http://<IP-сервера>` |
+| `FIRST_SUPERUSER_EMAIL` / `_PASSWORD` | данные первого администратора |
 
-### 3. Build and start
+### 3. Собрать и запустить
 
 ```bash
 docker compose up -d --build
 ```
 
-This single command:
-- Builds the React frontend (Node.js inside Docker, no Node needed on the server)
-- Builds the Python backend
-- Starts PostgreSQL, Redis, MinIO, backend (2 workers), nginx on port 80
-- Runs database migrations and seeds reference data automatically
+Одна команда запускает всё:
 
-### 4. Verify
+- ✅ Сборку React-фронтенда (Node.js внутри Docker, на сервере не нужен)
+- ✅ Сборку Python-бэкенда
+- ✅ PostgreSQL, Redis, MinIO, бэкенд (2 воркера), nginx на порту **80**
+- ✅ Автоматические миграции БД и заполнение справочников
+
+### 4. Проверить
 
 ```bash
 docker compose ps
 curl http://localhost/api/v1/health
 ```
 
-Open `http://<your-server-ip>` in a browser.
-
-### Routing
-
-| Path | Served by |
-|---|---|
-| `/` | React SPA (static files from nginx) |
-| `/api/v1/cars*` | Backend (nginx-cached, 10 min) |
-| `/api/*` | Backend (no cache) |
-| `/minio/*` | MinIO file storage |
-
-### Resource usage (4 GB server)
-
-| Service | RAM |
-|---|---|
-| PostgreSQL | ~700 MB |
-| Redis | ~300 MB |
-| MinIO | ~150 MB |
-| Backend (2 workers) | ~400 MB |
-| nginx | ~50 MB |
-| **Total** | **~1.6 GB** |
-
-### Update after code changes
-
-```bash
-git pull
-docker compose up -d --build
-```
+Открыть в браузере: `http://<IP-сервера>`
 
 ---
 
-## Local development
+## 💻 Локальная разработка
 
-### Prerequisites
+### Требования
 
 - Docker + Docker Compose v2
-- Node.js 22+ (for frontend hot-reload)
+- Node.js 22+
 
-### Backend + infrastructure
+### Бэкенд + инфраструктура
 
 ```bash
 cd backend
-
-cp .env.example .env          # adjust values if needed
-
-docker compose up -d          # uses compose.yml + compose.override.yml automatically
+docker compose up -d
 ```
 
-API: `http://localhost/api/v1` — Docs: `http://localhost/api/v1/docs`
+| Адрес | Что открывается |
+|-------|----------------|
+| `http://localhost/api/v1` | REST API |
+| `http://localhost/api/v1/docs` | Swagger UI |
 
-### Frontend (dev server)
+### Фронтенд (dev-сервер с hot-reload)
 
 ```bash
 cd frontend
-
 npm install
-npm run dev                   # http://localhost:5173
+npm run dev        # http://localhost:5173
 ```
 
-### Optional: AI assistant (Ollama)
+### AI-ассистент (опционально)
 
 ```bash
 cd backend
 docker compose --profile docker-ai up -d
 ```
 
-Requires ~4 GB of free RAM for the default model.
+> Требует ~4 GB свободной RAM для модели по умолчанию.
 
 ---
 
-## Running tests
+## 🔄 Обновление на сервере
+
+```bash
+cd /home/user1alex/app
+git pull origin main
+docker compose up -d --build
+```
+
+---
+
+## 🧪 Тесты
 
 ```bash
 # Backend
@@ -159,4 +216,39 @@ uv run pytest
 # Frontend
 cd frontend
 npm run test:run
+
+# С отчётом о покрытии
+npm run test:coverage
 ```
+
+---
+
+## 📊 Потребление ресурсов (4 GB VPS)
+
+| Сервис | RAM |
+|--------|-----|
+| PostgreSQL | ~700 MB |
+| Redis | ~300 MB |
+| MinIO | ~150 MB |
+| Backend (2 воркера) | ~400 MB |
+| nginx | ~50 MB |
+| **Итого** | **~1.6 GB** |
+
+---
+
+## 🗺 Маршрутизация nginx
+
+| Путь | Обработчик |
+|------|-----------|
+| `/` | React SPA (статические файлы) |
+| `/api/v1/listings*` | Бэкенд (кэш nginx 10 мин) |
+| `/api/*` | Бэкенд (без кэша) |
+| `/minio/*` | MinIO (медиафайлы) |
+
+---
+
+<div align="center">
+
+Сделано с ❤️ — FastAPI + React
+
+</div>
