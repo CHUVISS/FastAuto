@@ -666,6 +666,7 @@ function ReservationsTab({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [payingNow, setPayingNow] = useState<string | null>(null);
   const [declining, setDeclining] = useState<string | null>(null);
   const [declineConfirm, setDeclineConfirm] = useState<string | null>(null);
@@ -734,15 +735,16 @@ function ReservationsTab({ userId }: { userId: string }) {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    setDeleting(id);
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
+    setDeleting(deleteConfirm);
+    setDeleteConfirm(null);
     try {
-      await reservationsApi.delete(id);
-      setReservations(prev => prev.filter(r => r.id !== id));
+      await reservationsApi.delete(deleteConfirm);
       toast.success(RT.deleteSuccess ?? 'Запись удалена');
+      window.location.reload();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : RT.cancelError);
-    } finally {
       setDeleting(null);
     }
   };
@@ -999,7 +1001,7 @@ function ReservationsTab({ userId }: { userId: string }) {
 
                 {r.status === 'cancelled' && (
                   <button
-                    onClick={() => handleDelete(r.id)}
+                    onClick={() => setDeleteConfirm(r.id)}
                     disabled={deleting === r.id}
                     className="flex items-center gap-1.5 px-4 py-2 text-sm text-muted-foreground border border-border rounded-lg hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 transition-colors disabled:opacity-50">
                     {deleting === r.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
@@ -1011,6 +1013,31 @@ function ReservationsTab({ userId }: { userId: string }) {
           );
         })}
       </div>
+
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setDeleteConfirm(null)} />
+          <div className="relative bg-card border border-border rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h3 className="text-lg font-semibold text-foreground mb-2">{RT.deleteTitle ?? 'Удалить запись?'}</h3>
+            <p className="text-sm text-muted-foreground mb-6">{RT.deleteText ?? 'Отменённая бронь будет удалена без возможности восстановления.'}</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="flex-1 px-4 py-2 text-sm border border-border rounded-lg hover:bg-secondary transition-colors text-foreground">
+                {T.common.cancel}
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={!!deleting}
+                className="flex-1 flex justify-center items-center gap-2 px-4 py-2 text-sm bg-destructive text-white rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity">
+                {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                {RT.deleteBtn ?? 'Удалить'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {declineConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
